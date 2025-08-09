@@ -1,0 +1,57 @@
+# --- Byte-compiled / optimized / C extensions ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- Virtual Environments ---
+# A crucial line to ignore your local dependency folders
+.venv
+venv
+ENV
+env
+
+# --- Distribution / Packaging ---
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# --- Environment Variables ---
+# A critical security rule: NEVER commit your secrets!
+.env
+.env.*
+!/.env.example
+
+# --- IDE / Editor Specific ---
+# For VS Code and GitHub Codespaces
+.vscode/
+.idea/
+
+# --- OS-specific files ---
+# macOS
+.DS_Store
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# --- Log files ---
+*.log
+logs/
+
+# --- Testing ---
+.pytest_cache/
+.coverage
+htmlcov/

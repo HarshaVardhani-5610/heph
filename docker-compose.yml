@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  # Backend FastAPI service
+  backend:
+    build:
+      context: ./agents
+      dockerfile: Dockerfile
+    container_name: agent_factory_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - agent_factory_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend Streamlit service
+  frontend:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: agent_factory_frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - BACKEND_URL=http://backend:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - agent_factory_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# Create a custom network for service communication
+networks:
+  agent_factory_network:
+    driver: bridge
+
+# Optional: Define volumes for persistent data
+volumes:
+  agent_factory_data:

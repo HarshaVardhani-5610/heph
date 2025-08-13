@@ -6,7 +6,7 @@ import requests
 import json
 
 def test_api():
-    base_url = "http://localhost:8003"
+    base_url = "http://localhost:8000"
     
     print("Testing Agent Factory API...")
     
@@ -105,6 +105,64 @@ def test_api():
             
     except Exception as e:
         print(f"❌ Jira example test failed: {e}")
+
+    # Test 6: Station 4 - Builder Agent (Code Generation)
+    print("\n=== Testing Station 4 - Builder Agent ===")
+    
+    # Test n8n workflow generation
+    n8n_payload = {
+        "optimized_prompt": "Create an n8n JSON workflow that syncs Jira issues to a Google Sheet when new issues are created in the PHOENIX project."
+    }
+    
+    try:
+        response = requests.post(
+            f"{base_url}/generate_code",
+            json=n8n_payload,
+            headers={"Content-Type": "application/json"}
+        )
+        print(f"✅ n8n Generation Test: {response.status_code}")
+        result = response.json()
+        print(f"📝 Generated Type: {result['type']}")
+        print(f"📝 Code Preview: {result['code'][:200]}...")
+        
+        if result['type'] == 'n8n_workflow' and 'nodes' in result['code']:
+            print("✅ n8n workflow generation working correctly")
+        else:
+            print("⚠️  n8n workflow generation may need adjustment")
+            
+    except Exception as e:
+        print(f"❌ n8n generation test failed: {e}")
+
+    # Test Python FastAPI generation
+    python_payload = {
+        "optimized_prompt": "Create a Python FastAPI service that handles GitHub webhooks and sends security vulnerability alerts to Slack."
+    }
+    
+    try:
+        response = requests.post(
+            f"{base_url}/generate_code",
+            json=python_payload,
+            headers={"Content-Type": "application/json"}
+        )
+        print(f"\n✅ Python Generation Test: {response.status_code}")
+        result = response.json()
+        print(f"📝 Generated Type: {result['type']}")
+        print(f"📝 Code Preview: {result['code'][:200]}...")
+        
+        if result['type'] == 'python_agent' and 'FastAPI' in result['code']:
+            print("✅ Python FastAPI generation working correctly")
+        else:
+            print("⚠️  Python FastAPI generation may need adjustment")
+            
+    except Exception as e:
+        print(f"❌ Python generation test failed: {e}")
+
+    print("\n=== AGENT FACTORY COMPLETE ===")
+    print("🏭 All 4 stations tested:")
+    print("   Station 1: Clarifier (Prompt Refinement)")
+    print("   Station 2: Strategist (Feasibility Analysis)") 
+    print("   Station 3: Architect (Technical Specification)")
+    print("   Station 4: Builder (Code Generation)")
 
 if __name__ == "__main__":
     test_api()

@@ -55,3 +55,29 @@ logs/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# --- API Keys and Secrets ---
+# CRITICAL: Prevent API keys from being committed
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+*_keys.txt
+*_secrets.txt
+api_keys/
+secrets/
+
+# --- Perplexity API Configuration ---
+# Contains actual API keys and usage data
+perplexity_config.json
+perplexity_*.json
+api_config.json
+*.api_key
+
+# --- Temporary files ---
+*.tmp
+*.temp
+.cache/
+temp/

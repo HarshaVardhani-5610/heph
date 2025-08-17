@@ -2,6 +2,8 @@
 
 > **Intelligent Multi-Agent Workflow Generator for n8n Automation**
 
+🌐 **[Live Demo](https://kcbpsnomp9yhsm2zmcykau.streamlit.app/)**
+
 [![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org/)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docker.com/)
@@ -76,7 +78,7 @@ graph TD
 
 ## 📊 Current Training Data
 
-The system has been trained on a **curated set of n8n workflow examples** covering:
+The system has been trained on **limited n8n workflows** covering:
 - Calendar and scheduling automations
 - Email notification systems
 - Data synchronization workflows
@@ -119,43 +121,7 @@ The system has been trained on a **curated set of n8n workflow examples** coveri
 - **Docker Compose**: Multi-service orchestration
 - **Health Checks**: Service monitoring and recovery
 
-## 🚀 Quick Start
-
-### **Local Development**
-```bash
-# Clone repository
-git clone https://github.com/HarshaVardhani-5610/heph.git
-cd heph
-
-# Setup virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run Streamlit app
-streamlit run app/main_ui.py
-```
-
-### **Docker Deployment**
-```bash
-# Build and run all services
-docker-compose up --build
-
-# Access application
-# Frontend: http://localhost:8501
-# Backend: http://localhost:8000
-```
-
-### **Cloud Deployment**
-The application is optimized for deployment on:
-- **Streamlit Cloud** (Recommended)
-- **Railway**
-- **Render**
-- **AWS/GCP/Azure**
-
-## 📂 Project Structure
+##  Project Structure
 
 ```
 heph/
@@ -191,39 +157,12 @@ heph/
 - Team coordination automation
 - Customer communication flows
 
-## 🤝 Contributing
-
-We welcome contributions to enhance the multi-agent capabilities:
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-agent`)
-3. **Commit** your changes (`git commit -m 'Add amazing agent capability'`)
-4. **Push** to the branch (`git push origin feature/amazing-agent`)
-5. **Open** a Pull Request
-
-## 📈 Roadmap
-
-- [ ] **Q1 2025**: Massive workflow dataset ingestion
-- [ ] **Q2 2025**: Advanced pattern recognition algorithms
-- [ ] **Q3 2025**: Domain-specific agent specialization
-- [ ] **Q4 2025**: Enterprise-grade deployment options
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **n8n Community** for providing excellent automation platform
-- **Streamlit Team** for the intuitive web framework
-- **OpenAI** for enabling intelligent agent capabilities
-
 ---
 
 <div align="center">
 
 **Built with ❤️ by the Heph Team**
 
-[🌐 Live Demo](https://your-streamlit-app.streamlit.app) | [📖 Documentation](https://github.com/HarshaVardhani-5610/heph/wiki) | [🐛 Report Bug](https://github.com/HarshaVardhani-5610/heph/issues)
+[🌐 Live Demo](https://kcbpsnomp9yhsm2zmcykau.streamlit.app/) | [📖 Documentation](https://github.com/HarshaVardhani-5610/heph/wiki) | [🐛 Report Bug](https://github.com/HarshaVardhani-5610/heph/issues)
 
 </div>

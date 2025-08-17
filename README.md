@@ -13,41 +13,48 @@
 
 Heph Agent Factory is an intelligent multi-agent system that transforms natural language automation requirements into production-ready n8n workflows. By leveraging advanced AI reasoning and workflow pattern recognition, it bridges the gap between business needs and technical implementation.
 
-## 🏗️ Multi-Agent Architecture
+## 🏗️ Multi-Stage Wizard Architecture
 
-### 🧠 **Consultant Agent**
-- **Role**: Requirements analysis and feasibility assessment
-- **Function**: Analyzes user input to determine optimal automation approach
-- **Output**: Strategic recommendations (n8n vs custom solutions)
+### 🏠 **Stage 1: Welcome & Requirements**
+- **Purpose**: Goal collection and requirement gathering
+- **Function**: Captures user automation needs and specific details
+- **Output**: User goal and configuration parameters (calendar email, sheet URL, etc.)
 
-### 🔧 **Blueprint Agent** 
-- **Role**: Technical specification and workflow design
-- **Function**: Converts requirements into detailed technical prompts
-- **Output**: Machine-optimized n8n workflow specifications
+### 🎯 **Stage 2: Strategic Recommendation**
+- **Purpose**: Technology assessment and recommendation
+- **Function**: Presents n8n vs custom solution options with recommendations
+- **Output**: Technology choice validation (n8n workflow recommended)
 
-### ⚡ **Generator Agent**
-- **Role**: JSON workflow creation and validation
-- **Function**: Produces production-ready n8n workflow JSON
-- **Output**: Complete, importable n8n workflows
+### � **Stage 3: Blueprint Review & Edit**
+- **Purpose**: Technical specification refinement
+- **Function**: Displays machine-optimized prompt with editing capabilities
+- **Output**: Finalized technical implementation plan
 
-### 🎨 **Interface Agent**
-- **Role**: User experience and interaction management
-- **Function**: Manages multi-stage wizard interface
-- **Output**: Seamless user journey from idea to implementation
+### 🔄 **Stage 4: Workflow Generation**
+- **Purpose**: n8n JSON creation and processing
+- **Function**: Simulates workflow building with loading states
+- **Output**: Processing confirmation and transition to final stage
+
+### � **Stage 5: Final Product Delivery**
+- **Purpose**: Workflow delivery and export
+- **Function**: Presents complete n8n JSON with copy functionality
+- **Output**: Production-ready n8n workflow JSON
 
 ## 🚀 System Workflow
 
 ```mermaid
 graph TD
-    A[User Input] --> B[Consultant Agent]
-    B --> C{Feasibility Analysis}
-    C -->|n8n Recommended| D[Blueprint Agent]
-    C -->|Custom Solution| E[Alternative Path]
-    D --> F[Technical Specification]
-    F --> G[Generator Agent]
-    G --> H[n8n JSON Workflow]
-    H --> I[User Interface]
-    I --> J[Deploy & Execute]
+    A[User Input] --> B[Welcome Stage]
+    B --> C[Requirements Gathering]
+    C --> D[Strategic Recommendation]
+    D --> E[Blueprint Review]
+    E --> F{User Edits?}
+    F -->|Yes| G[Edit Mode]
+    G --> E
+    F -->|No| H[Workflow Generation]
+    H --> I[Processing & Building]
+    I --> J[Final Product Delivery]
+    J --> K[n8n JSON Export]
 ```
 
 ## 🎯 Key Features
@@ -57,12 +64,12 @@ graph TD
 - Context-aware feasibility assessment
 - Strategic technology recommendations
 
-### 🔄 **Multi-Stage Workflow**
-1. **Welcome Stage**: Requirement gathering and clarification
-2. **Strategic Stage**: Technology recommendation and validation
-3. **Blueprint Stage**: Technical specification and editing
-4. **Generation Stage**: Workflow creation and optimization
-5. **Delivery Stage**: JSON export and deployment guidance
+### 🔄 **Multi-Stage Wizard**
+1. **Welcome Stage**: Goal definition and requirement specification
+2. **Strategic Stage**: Technology recommendation and approach validation  
+3. **Blueprint Stage**: Technical specification review and customization
+4. **Generation Stage**: Workflow building and processing simulation
+5. **Delivery Stage**: Final n8n JSON export and deployment guidance
 
 ### 🎨 **Enhanced UI/UX**
 - Glowy red input boxes with responsive focus states

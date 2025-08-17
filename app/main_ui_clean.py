@@ -7,59 +7,6 @@ import streamlit as st
 import json
 import time
 
-# Custom CSS for glowy red input boxes
-st.markdown("""
-<style>
-    /* Style text input fields with red glow */
-    .stTextInput > div > div > input {
-        border: 2px solid #ff4444 !important;
-        box-shadow: 0 0 25px rgba(255, 68, 68, 0.8), inset 0 0 10px rgba(255, 68, 68, 0.2) !important;
-        border-radius: 8px !important;
-        background-color: rgba(0, 0, 0, 0.1) !important;
-        color: #ffffff !important;
-    }
-    
-    /* Style text input fields when focused */
-    .stTextInput > div > div > input:focus {
-        border: 2px solid #ff6666 !important;
-        box-shadow: 0 0 35px rgba(255, 68, 68, 1.0), inset 0 0 15px rgba(255, 68, 68, 0.3) !important;
-        outline: none !important;
-        background-color: rgba(0, 0, 0, 0.05) !important;
-    }
-    
-    /* Style selectbox with red glow */
-    .stSelectbox > div > div > select {
-        border: 2px solid #ff4444 !important;
-        box-shadow: 0 0 25px rgba(255, 68, 68, 0.8), inset 0 0 10px rgba(255, 68, 68, 0.2) !important;
-        border-radius: 8px !important;
-        background-color: rgba(0, 0, 0, 0.1) !important;
-        color: #ffffff !important;
-    }
-    
-    /* Style text area with red glow */
-    .stTextArea > div > div > textarea {
-        border: 2px solid #ff4444 !important;
-        box-shadow: 0 0 25px rgba(255, 68, 68, 0.8), inset 0 0 10px rgba(255, 68, 68, 0.2) !important;
-        border-radius: 8px !important;
-        background-color: rgba(0, 0, 0, 0.1) !important;
-        color: #ffffff !important;
-    }
-    
-    /* Style text area when focused */
-    .stTextArea > div > div > textarea:focus {
-        border: 2px solid #ff6666 !important;
-        box-shadow: 0 0 35px rgba(255, 68, 68, 1.0), inset 0 0 15px rgba(255, 68, 68, 0.3) !important;
-        outline: none !important;
-        background-color: rgba(0, 0, 0, 0.05) !important;
-    }
-    
-    /* Style placeholder text */
-    .stTextInput > div > div > input::placeholder {
-        color: rgba(255, 255, 255, 0.6) !important;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 # Configure page
 st.set_page_config(
     page_title="Heph Agent Factory",
@@ -221,9 +168,8 @@ elif st.session_state.stage == 'final_review':
     
     with col1:
         if st.button("📋 Copy to Clipboard"):
-            # Show a pre-selected text area that's easy to copy
-            st.code(workflow_json_str, language='json')
-            st.info("💡 Click in the code box above and press Ctrl+A then Ctrl+C to copy")
+            st.text_area("Copy this JSON:", value=workflow_json_str, height=100, key="copy_area")
+            st.info("👆 Select all text above and copy with Ctrl+C (Cmd+C on Mac)")
     
     with col2:
         if st.button("🔄 Start Over"):

@@ -4,13 +4,15 @@ services:
   # Backend FastAPI service
   backend:
     build:
-      context: ./agents
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: agents/Dockerfile
     container_name: agent_factory_backend
     ports:
       - "8000:8000"
     environment:
       - PYTHONUNBUFFERED=1
+    volumes:
+      - ./.env:/app/.env:ro
     networks:
       - agent_factory_network
     restart: unless-stopped
@@ -24,8 +26,8 @@ services:
   # Frontend Streamlit service
   frontend:
     build:
-      context: ./app
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: app/Dockerfile
     container_name: agent_factory_frontend
     ports:
       - "8501:8501"

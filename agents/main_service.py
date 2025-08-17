@@ -23,9 +23,11 @@ class RefinePromptRequest(BaseModel):
 
 class RefinePromptResponse(BaseModel):
     refined_prompt: str
+    questions: Optional[str] = None  # Clarifying questions to ask user
 
 class FeasibilityRequest(BaseModel):
     prompt: str
+    user_answers: Optional[str] = None  # User's answers to clarifying questions
 
 class FeasibilityResponse(BaseModel):
     text: str
@@ -33,21 +35,26 @@ class FeasibilityResponse(BaseModel):
     option1_value: str
     option2_title: str
     option2_value: str
+    recommended_option: Optional[str] = None
 
 class OptimizePromptRequest(BaseModel):
     prompt: str
     path: str
+    refinement_instruction: Optional[str] = None
 
 class OptimizePromptResponse(BaseModel):
     final_prompt: str
 
 class GenerateRequest(BaseModel):
-    optimized_prompt: str
+    prompt: str
+    path: str
+    requirements: Optional[str] = None
+    optimization_notes: Optional[str] = None
 
 class GenerateResponse(BaseModel):
     generated_code: str
-    code_type: str  # "n8n_workflow" or "python_agent"
-    deployment_instructions: str
+    file_structure: Optional[dict] = None
+    implementation_notes: Optional[str] = None
 
 
 # FastAPI App Configuration
@@ -156,49 +163,92 @@ async def api_status():
 @app.post("/refine_prompt", response_model=RefinePromptResponse)
 async def refine_prompt(request: RefinePromptRequest):
     """
-    Refines a vague automation goal into specific technical questions
+    Analyzes user goals like an intelligent consultant and asks only necessary questions
     
     Example:
-    Input: {"goal": "I need a bot for GitHub."}
-    Output: {"refined_prompt": "To clarify: 1. What GitHub event should trigger this bot..."}
+    Input: {"goal": "I need to check my website"}
+    Output: {
+        "refined_prompt": "Website monitoring system for health checks",
+        "questions": "What is the URL of the website you want to monitor?"
+    }
+    
+    Input: {"goal": "Monitor https://api.myapp.com and send alerts to Slack"}
+    Output: {
+        "refined_prompt": "API monitoring system with Slack notifications",
+        "questions": "What should trigger an alert (downtime, slow response, errors)? What is your Slack webhook URL?"
+    }
     """
     try:
-        # Use Perplexity API for prompt refinement
-        system_prompt = f"""You are an expert AI assistant helping a developer scope an automation task. 
-Your role is to ask precise, technical clarifying questions to transform vague requests into specific, actionable requirements.
+        # Use Perplexity API for intelligent analysis and targeted questions
+        system_prompt = f"""You are an intelligent automation consultant. Your job is to analyze the user's goal and ask only the specific questions needed to make it actionable.
 
-Guidelines:
-- Ask 2-4 specific technical questions
-- Focus on triggers, actions, and technical specifications
-- Be concise and developer-focused
-- Consider implementation details like APIs, webhooks, file formats, etc.
-- Help identify the exact scope and requirements
+**Your Process:**
+1. First, summarize your understanding of what they want to achieve in one sentence
+2. Second, identify the specific missing entities or ambiguities in their request (e.g., missing URL, vague action, undefined trigger)
+3. Finally, formulate 1-2 precise questions to get only the information you are missing
+4. Do NOT ask any questions if the goal is already clear and actionable
 
-Transform this vague automation goal into specific technical questions: "{request.goal}"
+**Examples of Intelligent Analysis:**
 
-Provide a clear, actionable response that helps clarify the requirements."""
+User: "I need to check my website"
+Missing: URL, what "check" means, what to do with results
+Questions: "1. What is the URL of the website? 2. What should happen when issues are detected?"
+
+User: "Monitor https://api.myapp.com and alert Slack when down"
+Missing: Slack details, definition of "down"
+Questions: "1. What is your Slack webhook URL? 2. Should alerts trigger on downtime only, or also slow responses/errors?"
+
+User: "Backup my database every night at 2 AM"
+Missing: Database details, backup location
+Questions: "1. What type of database (MySQL, PostgreSQL, etc.) and connection details? 2. Where should backups be stored?"
+
+User: "Send a daily report of our API usage to team@company.com at 9 AM"
+Missing: Data source, report format
+Questions: "1. Which API service provides the usage data? 2. What specific metrics should be included in the report?"
+
+**User's Goal:** "{request.goal}"
+
+Analyze this goal and respond with EXACTLY this JSON format:
+{{
+  "refined_prompt": "One sentence summary of what they want to achieve",
+  "questions": "Your targeted questions (or null if no questions needed)"
+}}
+
+Remember: Only ask what you actually need to know. Don't ask generic questions."""
 
         # Call Perplexity API
         response = await call_perplexity_api(
             system_prompt,
             max_tokens=800,
-            temperature=0.3
+            temperature=0.2  # Lower temperature for more focused analysis
         )
         
-        # Extract the refined prompt from response
+        # Extract and parse the response
         if response.get('choices') and response['choices'][0].get('message'):
-            refined_prompt = response['choices'][0]['message']['content']
-        else:
-            # Fallback to mock if API response is unexpected
-            refined_prompt = await mock_refine_prompt(request.goal)
+            content = response['choices'][0]['message']['content']
+            
+            # Try to extract JSON from response
+            import json
+            import re
+            
+            json_match = re.search(r'\{.*\}', content, re.DOTALL)
+            if json_match:
+                try:
+                    data = json.loads(json_match.group())
+                    return RefinePromptResponse(
+                        refined_prompt=data.get('refined_prompt', f"Refined goal: {request.goal}"),
+                        questions=data.get('questions', "Please provide more details about your automation requirements.")
+                    )
+                except json.JSONDecodeError:
+                    pass
         
-        return RefinePromptResponse(refined_prompt=refined_prompt)
+        # Fallback to mock if API fails
+        return await mock_refine_prompt_with_questions(request.goal)
     
     except Exception as e:
         # Fallback to mock function if API fails
         try:
-            refined_prompt = await mock_refine_prompt(request.goal)
-            return RefinePromptResponse(refined_prompt=refined_prompt)
+            return await mock_refine_prompt_with_questions(request.goal)
         except:
             raise HTTPException(status_code=500, detail=f"Error refining prompt: {str(e)}")
 
@@ -206,53 +256,63 @@ Provide a clear, actionable response that helps clarify the requirements."""
 @app.post("/feasibility", response_model=FeasibilityResponse)
 async def feasibility_analysis(request: FeasibilityRequest):
     """
-    Analyzes a refined prompt and recommends optimal implementation approach (n8n vs Custom Python)
+    Analyzes a refined prompt AND user answers to recommend optimal implementation approach
     
     Example:
-    Input: {"prompt": "A bot to run a nightly sanity check on 10 internal APIs and post a summary to Slack."}
+    Input: {
+        "prompt": "Database rollback script checker for GitLab PRs",
+        "user_answers": "1. Monitor all PRs with .sql files 2. Check for CREATE/ALTER/DROP statements 3. Post comments on PRs missing rollbacks"
+    }
     Output: {
-        "text": "This task involves a scheduled trigger and connecting two known APIs...",
-        "option1_title": "n8n Sanity Check Workflow",
-        "option1_value": "n8n-only workflow",
-        "option2_title": "Custom Python Agent",
-        "option2_value": "Custom Python Agent"
+        "text": "This task requires parsing SQL files and GitLab API integration...",
+        "option1_title": "Custom Python Agent",
+        "option1_value": "Custom Python Agent",
+        "option2_title": "n8n + Custom Scripts", 
+        "option2_value": "n8n-only workflow",
+        "recommended_option": "Custom Python Agent"
     }
     """
     try:
+        # Build comprehensive prompt including user answers
+        full_context = f"Original Goal: {request.prompt}"
+        if request.user_answers:
+            full_context += f"\n\nUser's Clarifying Answers: {request.user_answers}"
+        
         # Use Perplexity API for feasibility analysis
         system_prompt = f"""You are a technical strategist specializing in automation tool selection. 
-Your role is to analyze refined automation requirements and recommend the optimal implementation approach.
+Your role is to analyze automation requirements (including user clarifications) and recommend the optimal approach.
 
 **Key Context for Decision Making:**
-n8n is a source-available workflow automation tool with over 400 pre-built integrations. It excels at tasks that are:
-- Event-driven (webhook triggers)
-- Run on a schedule (cron)
-- Involve data synchronization between two or more known cloud applications like Slack, Jira, Google Sheets, and Airtable
-- Connecting existing APIs with minimal custom logic
+n8n is excellent for:
+- Event-driven workflows (webhooks)
+- Scheduled tasks (cron)
+- API integrations between known services (Slack, Jira, Google Sheets, etc.)
+- Simple data transformations
 
-Custom Python is required for tasks involving:
-- Complex, bespoke logic
-- Parsing unstructured text or code files
+Custom Python is required for:
+- Complex logic and algorithms
+- File parsing (code, logs, documents)
 - Heavy data manipulation
-- Custom algorithms or processing
-- Tasks requiring libraries not available in n8n
+- Custom API implementations
+- Tasks requiring specialized libraries
+
+**Analysis Context:**
+{full_context}
 
 **Guidelines:**
-- Analyze the task characteristics carefully
-- Recommend n8n for standard API integrations and simple workflows
-- Recommend Custom Python for complex logic or data processing
-- Always provide clear reasoning for your recommendation
-- Present both options but highlight the optimal choice
-
-Analyze this automation requirement: "{request.prompt}"
+- Analyze BOTH the original goal AND the user's clarifying answers
+- Consider implementation complexity, maintainability, and scalability
+- Recommend the approach that best fits the specific requirements
+- Provide clear reasoning for your recommendation
 
 Return ONLY a JSON object with these exact fields:
 {{
-  "text": "your analysis and reasoning",
+  "text": "your detailed analysis considering the user's answers",
   "option1_title": "recommended option title",
-  "option1_value": "n8n-only workflow" or "Custom Python Agent",
+  "option1_value": "Custom Python Agent" or "n8n-only workflow",
   "option2_title": "alternative option title", 
-  "option2_value": "Custom Python Agent" or "n8n-only workflow"
+  "option2_value": "n8n-only workflow" or "Custom Python Agent",
+  "recommended_option": "Custom Python Agent" or "n8n-only workflow"
 }}"""
 
         # Call Perplexity API
@@ -278,6 +338,16 @@ Return ONLY a JSON object with these exact fields:
                     return FeasibilityResponse(**analysis_data)
                 except json.JSONDecodeError:
                     pass
+        
+        # Fallback to mock if API fails or parsing fails
+        return await mock_feasibility_analysis(request.prompt, request.user_answers)
+    
+    except Exception as e:
+        # Fallback to mock function if API fails
+        try:
+            return await mock_feasibility_analysis(request.prompt, request.user_answers)
+        except:
+            raise HTTPException(status_code=500, detail=f"Error analyzing feasibility: {str(e)}")
         
         # Fallback to mock if parsing fails
         analysis = await mock_feasibility_analysis(request.prompt)
@@ -458,6 +528,91 @@ Also provide deployment instructions as a separate section."""
             raise HTTPException(status_code=500, detail=f"Error generating code: {str(e)}")
 
 
+async def mock_refine_prompt_with_questions(goal: str) -> RefinePromptResponse:
+    """
+    Mock function demonstrating intelligent consultant behavior
+    Only asks for genuinely missing information, not generic questions
+    """
+    goal_lower = goal.lower()
+    
+    # Website monitoring examples
+    if "check" in goal_lower and "website" in goal_lower and "http" not in goal_lower:
+        return RefinePromptResponse(
+            refined_prompt="Website monitoring system for health checks",
+            questions="1. What is the URL of the website? 2. What should happen when issues are detected?"
+        )
+    
+    # API monitoring with partial details
+    elif "monitor" in goal_lower and "api" in goal_lower and "slack" in goal_lower and "webhook" not in goal_lower:
+        return RefinePromptResponse(
+            refined_prompt="API monitoring system with Slack notifications", 
+            questions="1. What is your Slack webhook URL? 2. Should alerts trigger on downtime only, or also slow responses/errors?"
+        )
+    
+    # Database backup with missing connection details
+    elif "backup" in goal_lower and ("database" in goal_lower or "postgresql" in goal_lower or "mysql" in goal_lower):
+        return RefinePromptResponse(
+            refined_prompt="Automated database backup system",
+            questions="1. What are the database connection details? 2. Where should backups be stored?"
+        )
+    
+    # Complete and actionable goals - no questions needed!
+    elif ("http" in goal_lower and "every" in goal_lower and "log" in goal_lower) or \
+         ("send" in goal_lower and "get request" in goal_lower and "hour" in goal_lower):
+        return RefinePromptResponse(
+            refined_prompt="Automated HTTP health check with response logging",
+            questions=None  # Goal is already complete and actionable!
+        )
+    
+    # GitLab automation with specific details
+    elif "gitlab" in goal_lower and "sql" in goal_lower and "rollback" in goal_lower:
+        return RefinePromptResponse(
+            refined_prompt="GitLab SQL rollback validation system for pull request monitoring",
+            questions="1. What is your GitLab API token? 2. Which specific GitLab project(s) should be monitored?" 
+                     # Goal is very specific about what to do, just needs access details
+        )
+    
+    # GitHub automation with specific details  
+    elif "github" in goal_lower and ("pull request" in goal_lower or "commit" in goal_lower):
+        if "webhook" not in goal_lower:
+            return RefinePromptResponse(
+                refined_prompt="GitHub repository automation system",
+                questions="1. What is your GitHub webhook URL? 2. Which specific events should trigger actions?"
+            )
+        else:
+            return RefinePromptResponse(
+                refined_prompt="GitHub repository automation with webhook integration",
+                questions=None  # All details provided
+            )
+    
+    # Very vague goals need clarification
+    elif len(goal.split()) < 6 and ("bot" in goal_lower or "automate something" in goal_lower):
+        return RefinePromptResponse(
+            refined_prompt=f"Automation system for {goal}",
+            questions="1. What specific task should be automated? 2. What should trigger this automation? 3. What actions should be performed?"
+        )
+    
+    # Generic catch-all - but still intelligent
+    else:
+        # Analyze what's actually missing
+        missing_elements = []
+        if "monitor" in goal_lower and "http" not in goal_lower:
+            missing_elements.append("URL or endpoint to monitor")
+        if "alert" in goal_lower and "email" not in goal_lower and "slack" not in goal_lower:
+            missing_elements.append("notification destination")
+        if "schedule" in goal_lower and not any(time in goal_lower for time in ["daily", "hourly", "minute", "am", "pm"]):
+            missing_elements.append("specific timing")
+            
+        if missing_elements:
+            questions = f"What {' and '.join(missing_elements)} should be used?"
+        else:
+            questions = "1. What specific triggers should start this automation? 2. What actions should be performed?"
+            
+        return RefinePromptResponse(
+            refined_prompt=f"Intelligent automation system for {goal}",
+            questions=questions
+        )
+
 async def mock_refine_prompt(goal: str) -> str:
     """
     Mock function to simulate LLM prompt refinement
@@ -479,18 +634,61 @@ async def mock_refine_prompt(goal: str) -> str:
         return f"To clarify your goal '{goal}': 1. What specific trigger or event should initiate this? 2. What systems or platforms are involved? 3. What is the desired end result? 4. Are there any technical constraints or requirements?"
 
 
-async def mock_feasibility_analysis(prompt: str) -> dict:
+async def mock_feasibility_analysis(prompt: str, user_answers: Optional[str] = None) -> FeasibilityResponse:
     """
     Mock function to simulate LLM feasibility analysis for n8n vs Custom Python decision
+    NOW INCLUDES USER ANSWERS in the analysis!
     TODO: Replace with actual LLM API integration
     """
-    prompt_lower = prompt.lower()
+    # Combine prompt and user answers for comprehensive analysis
+    full_context = prompt.lower()
+    if user_answers:
+        full_context += f" {user_answers.lower()}"
     
     # Keywords that suggest n8n is optimal
-    n8n_keywords = ["schedule", "cron", "nightly", "webhook", "api", "slack", "jira", "google sheets", 
-                    "airtable", "trigger", "integration", "sync", "connect"]
+    n8n_keywords = ["schedule", "cron", "nightly", "webhook", "api integration", "slack", "jira", "google sheets", 
+                    "airtable", "simple trigger", "connect services", "sync data"]
     
     # Keywords that suggest custom Python is needed
+    python_keywords = ["parse", "parsing", "complex logic", "algorithm", "file processing", "custom", 
+                      "sql analysis", "code analysis", "machine learning", "data science", "scraping",
+                      "rollback", "migration check", "validation", "compliance"]
+    
+    # Count keyword matches
+    n8n_score = sum(1 for keyword in n8n_keywords if keyword in full_context)
+    python_score = sum(1 for keyword in python_keywords if keyword in full_context)
+    
+    # Special cases based on user answers
+    if user_answers and any(word in user_answers.lower() for word in ["parse sql", "analyze code", "check files", "rollback", "migration"]):
+        python_score += 3
+    
+    if user_answers and any(word in user_answers.lower() for word in ["slack notification", "webhook", "schedule", "simple integration"]):
+        n8n_score += 2
+    
+    # Determine recommendation
+    if python_score > n8n_score:
+        recommended = "Custom Python Agent"
+        analysis_text = f"Based on your requirements (especially: {user_answers[:100] if user_answers else 'the complexity mentioned'}...), this task requires custom logic, file parsing, or complex data manipulation that exceeds n8n's capabilities. A Custom Python Agent will provide the flexibility and processing power needed."
+        option1_title = "🐍 Custom Python Agent (Recommended)"
+        option1_value = "Custom Python Agent"
+        option2_title = "⚡ n8n Workflow"
+        option2_value = "n8n-only workflow"
+    else:
+        recommended = "n8n-only workflow"
+        analysis_text = f"Your requirements (including: {user_answers[:100] if user_answers else 'the workflow aspects'}...) align well with n8n's strengths in API integrations, scheduled tasks, and connecting established services. This approach will be faster to implement and easier to maintain."
+        option1_title = "⚡ n8n Workflow (Recommended)"
+        option1_value = "n8n-only workflow"
+        option2_title = "🐍 Custom Python Agent"
+        option2_value = "Custom Python Agent"
+    
+    return FeasibilityResponse(
+        text=analysis_text,
+        option1_title=option1_title,
+        option1_value=option1_value,
+        option2_title=option2_title,
+        option2_value=option2_value,
+        recommended_option=recommended
+    )
     python_keywords = ["parse", "analysis", "complex logic", "algorithm", "machine learning", 
                       "data manipulation", "custom", "processing", "calculation"]
     
